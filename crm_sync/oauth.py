@@ -15,12 +15,15 @@ from tools.verify_feishu_schema import NoRedirect
 
 REDIRECT_URI = 'http://localhost:8765/callback'
 SCOPES = 'task:task:read'
+UPDATE_SCOPES = 'task:task:read task:task:writeonly'
 
 
-def authorization_url(app_id, state, verifier):
+def authorization_url(app_id, state, verifier, scopes=SCOPES):
+    if scopes not in (SCOPES, UPDATE_SCOPES):
+        raise Conflict('probe scopes not permitted')
     challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode('ascii')).digest()).rstrip(b'=').decode()
     params = {'client_id':app_id,'response_type':'code','redirect_uri':REDIRECT_URI,
-              'scope':SCOPES,'state':state,'code_challenge':challenge,
+              'scope':scopes,'state':state,'code_challenge':challenge,
               'code_challenge_method':'S256','prompt':'consent'}
     return 'https://accounts.feishu.cn/open-apis/authen/v1/authorize?' + urllib.parse.urlencode(params)
 
@@ -57,7 +60,7 @@ def token_request(payload):
     return result['access_token']
 
 
-def authorize(app_id, secret, timeout=300, exchange=token_request):
+def authorize(app_id, secret, timeout=300, exchange=token_request, *, scopes=SCOPES):
     state=secrets.token_urlsafe(32)
     verifier=secrets.token_urlsafe(64)
     result={}
@@ -90,7 +93,7 @@ def authorize(app_id, secret, timeout=300, exchange=token_request):
         raise Conflict('local callback port unavailable; no browser authorization started') from None
     with server:
         server.timeout=1
-        if not webbrowser.open(authorization_url(app_id,state,verifier)):
+        if not webbrowser.open(authorization_url(app_id,state,verifier,scopes)):
             raise Conflict('browser could not open; authorization not started')
         print('浏览器已打开飞书官方授权页。请确认是测试应用并完成登录授权；最多等待5分钟。')
         deadline=time.monotonic()+timeout
