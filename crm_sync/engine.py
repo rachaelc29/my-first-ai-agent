@@ -1,5 +1,5 @@
 """Persistent baselines + pending operations. No AI or production credentials."""
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import date, datetime
 import json
 import os
@@ -67,6 +67,8 @@ class Engine:
         return {'status':'已完成','latest':stamp+'（墨尔本时间）\n'+task.content,'plan':''}
 
     def _operation(self, c, desired_task, changes, current_task):
+        if not desired_task.completed:
+            desired_task = replace(desired_task, customer_name=c.name)
         op = {'crm_before': asdict(c), 'changes': changes,
               'task_before': asdict(current_task) if current_task else None,
               'task_after': asdict(desired_task)}
@@ -219,6 +221,9 @@ class Engine:
                         raise Conflict('empty task content')
                     self._operation(c,task,{'plan':plan_text(task)},task)
                 else:
+                    if c.name and task.customer_name != c.name:
+                        self._operation(c, task, {}, task)
+                        continue
                     # Unrelated changes such as latest follow-up are new baselines,
                     # never written back by ordinary plan synchronization.
                     self._baseline(c,task)

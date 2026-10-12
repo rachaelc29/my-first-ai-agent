@@ -48,8 +48,24 @@ func marker(_ id: String, _ customer: String) -> String {
 func serialize(_ r: EKReminder, taskID: String, customerID: String) throws -> [String: Any] {
     let suffix = marker(taskID, customerID)
     guard let body = r.notes, body.hasSuffix(suffix) else { try fail("binding_invalid") }
-    let extra = String(body.dropLast(suffix.count))
-    let content = r.title + (extra.isEmpty ? "" : "\n" + extra)
+    var extra = String(body.dropLast(suffix.count))
+    var displayName = ""
+    if let last = extra.components(separatedBy: "\n").last,
+       last.hasPrefix("[CRM_SYNC_NAME:"), last.hasSuffix("]") {
+        let encoded = String(last.dropFirst("[CRM_SYNC_NAME:".count).dropLast())
+        guard let bytes = Data(base64Encoded: encoded),
+              let decoded = String(data: bytes, encoding: .utf8) else { try fail("display_metadata_invalid") }
+        displayName = decoded
+        extra = String(extra.dropLast(last.count))
+        if extra.hasSuffix("\n") { extra.removeLast() }
+    }
+    let prefix = displayName.isEmpty ? "" : "【\(displayName)】"
+    var actionTitle: String = r.title
+    if !prefix.isEmpty {
+        guard actionTitle.hasPrefix(prefix) else { try fail("customer_label_changed") }
+        actionTitle = String(actionTitle.dropFirst(prefix.count))
+    }
+    let content = actionTitle + (extra.isEmpty ? "" : "\n" + extra)
     var verified = true
     if r.isCompleted {
         // EventKit's normal completion write can stamp modification a few ms
@@ -65,7 +81,7 @@ func serialize(_ r: EKReminder, taskID: String, customerID: String) throws -> [S
     if let date = r.completionDate { completedAt = format.string(from: date) }
     else { completedAt = NSNull() }
     return ["id":taskID,"customer_id":customerID,"content":content,"due":dateText(r),
-            "completed":r.isCompleted,"final_verified":verified,"completed_at":completedAt]
+            "completed":r.isCompleted,"final_verified":verified,"completed_at":completedAt,"customer_name":displayName]
 }
 func bound(_ items: [EKReminder], id: String) throws -> EKReminder? {
     let needle = "[CRM_SYNC_TASK:\(id);CUSTOMER:"
@@ -108,7 +124,7 @@ func run(_ input: [String: Any]) throws -> Any {
     }
     if command != "put" { try fail("unknown_command") }
     guard let task = input["task"] as? [String: Any], let content = task["content"] as? String,
-          !content.isEmpty, !content.contains("[CRM_SYNC_TASK:"),
+          !content.isEmpty, !content.contains("[CRM_SYNC_TASK:"), !content.contains("[CRM_SYNC_NAME:"),
           task["id"] as? String == taskID, task["customer_id"] as? String == customer else { try fail("task_invalid") }
     if let r = existing {
         guard let expected = input["expected"] as? [String:Any] else { try fail("creation_conflict") }
@@ -119,8 +135,11 @@ func run(_ input: [String: Any]) throws -> Any {
     r.calendar = list
     // Editable title and body together form the action content.
     let lines = content.components(separatedBy: "\n")
-    r.title = lines[0]
-    r.notes = lines.dropFirst().joined(separator:"\n") + marker(taskID,customer)
+    let displayName = task["customer_name"] as? String ?? ""
+    r.title = (displayName.isEmpty ? "" : "【\(displayName)】") + lines[0]
+    let encoded = Data(displayName.utf8).base64EncodedString()
+    let actionBody = lines.dropFirst().joined(separator:"\n")
+    r.notes = actionBody + (actionBody.isEmpty ? "" : "\n") + "[CRM_SYNC_NAME:\(encoded)]" + marker(taskID,customer)
     if let text = task["due"] as? String {
         let pieces = text.split(separator:"-").compactMap { Int($0) }
         guard pieces.count == 3 else { try fail("date_invalid") }

@@ -198,3 +198,34 @@ class SyncTests(unittest.TestCase):
         t=self.create();t.completed=True;t.completed_at='2026-10-12T10:00:00'
         self.assertEqual(self.e.run()[0]['status'],'needs_confirmation')
         self.assertNotEqual(self.c.plan,'')
+
+    def test_customer_name_is_attached_without_changing_plan(self):
+        self.c.name='虚构客户 A'
+        task=self.create()
+        self.assertEqual(task.customer_name,'虚构客户 A')
+        self.assertEqual(task.content,'问候虚构客户')
+        self.assertEqual(self.c.plan,'2026-12-01，问候虚构客户')
+
+    def test_existing_active_task_gets_name_without_duplicate(self):
+        task=self.create();self.c.name='虚构客户 A'
+        self.assertEqual(self.e.run()[0]['status'],'synchronized')
+        self.assertEqual(len(self.apple.tasks),1)
+        self.assertEqual(self.apple.find(task.id).customer_name,'虚构客户 A')
+        self.assertEqual(self.e.run()[0]['status'],'unchanged')
+
+    def test_customer_rename_does_not_write_other_crm_fields(self):
+        self.c.name='原虚构名字';task=self.create();count=len(self.crm.writes)
+        self.c.name='新虚构名字';self.e.run()
+        self.assertEqual(self.apple.find(task.id).customer_name,'新虚构名字')
+        self.assertEqual(len(self.crm.writes),count)
+        self.assertEqual(self.c.latest,'旧的虚构跟进内容')
+
+    def test_name_is_not_written_into_completion_content(self):
+        self.c.name='虚构客户 A';task=self.create()
+        task.completed=True;task.completed_at='2026-10-12T10:00:00Z';self.e.run()
+        self.assertEqual(self.c.latest,'2026-10-12 21:00:00 +1100（墨尔本时间）\n问候虚构客户')
+        self.assertNotIn('【虚构客户 A】',self.c.latest)
+
+    def test_name_is_not_written_into_plan_content(self):
+        self.c.name='虚构客户 A';task=self.create();task.content='修改后的虚构行动';self.e.run()
+        self.assertEqual(self.c.plan,'2026-12-01，修改后的虚构行动')

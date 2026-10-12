@@ -81,7 +81,7 @@ class FeishuTestCRM:
             anchor=datetime.fromtimestamp(anchor/1000,ZONE).date().isoformat()
         else:anchor=''
         return Customer(record['record_id'],text('下次follow'),text('最新follow'),
-            text('跟进任务编号'),text('跟进任务状态'),anchor)
+            text('跟进任务编号'),text('跟进任务状态'),anchor,text('名字'))
 
     def list_customers(self):
         # Fetch only explicitly allowed mock records, never list entire customer table.

@@ -10,6 +10,7 @@ class Customer:
     task_id: str = ''
     status: str = ''
     anchor: str = ''
+    name: str = ''
 
 @dataclass
 class Task:
@@ -21,6 +22,7 @@ class Task:
     # Set false if completion-time content cannot be established.
     final_verified: bool = True
     completed_at: str | None = None
+    customer_name: str = ''
 
 
 def digest(value):
