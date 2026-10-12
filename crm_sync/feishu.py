@@ -4,6 +4,7 @@ import json
 import urllib.parse
 import urllib.request
 import urllib.error
+import ssl
 from .model import Customer, Conflict, Uncertain
 from tools.verify_feishu_schema import NoRedirect
 
@@ -41,6 +42,8 @@ class FeishuTestCRM:
         return 'bitable/v1/apps/'+self.app+'/tables/'+self.table+'/'+suffix
 
     def call(self,path,method,payload=None):
+        stage = ('authentication' if path.startswith('auth/') else
+                 'task API' if path.startswith('task/') else 'test Bitable API')
         headers={'Content-Type':'application/json'}
         if self.token:headers['Authorization']='Bearer '+self.token
         request=urllib.request.Request('https://open.feishu.cn/open-apis/'+path,
@@ -48,11 +51,24 @@ class FeishuTestCRM:
         try:
             with urllib.request.build_opener(NoRedirect()).open(request,timeout=30) as response:
                 result=json.load(response)
-        except Exception:
-            if method=='PUT':raise Uncertain('test write result unknown') from None
-            raise Conflict('test API unavailable') from None
+        except urllib.error.HTTPError as exc:
+            if method in ('PUT','PATCH','POST') and not path.startswith('auth/'):
+                raise Uncertain(stage+' write HTTP status '+str(exc.code)+'; verify before retry') from None
+            raise Conflict(stage+' HTTP status '+str(exc.code)) from None
+        except urllib.error.URLError as exc:
+            category = ('SSL certificate verification failed'
+                        if isinstance(exc.reason,ssl.SSLCertVerificationError)
+                        else 'network error type '+type(exc.reason).__name__)
+            if method in ('PUT','PATCH','POST') and not path.startswith('auth/'):
+                raise Uncertain(stage+' write result unknown; '+category) from None
+            raise Conflict(stage+' unavailable; '+category) from None
+        except Exception as exc:
+            if method in ('PUT','PATCH','POST') and not path.startswith('auth/'):
+                raise Uncertain(stage+' write result unknown') from None
+            raise Conflict(stage+' unavailable; error type '+type(exc).__name__) from None
         if result.get('code')!=0:
-            raise Conflict('test API rejected operation')
+            code=result.get('code')
+            raise Conflict(stage+' rejected operation; numeric code '+str(code if isinstance(code,int) else 'unknown'))
         return result
 
     def pages(self,path):
