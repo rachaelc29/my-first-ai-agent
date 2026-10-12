@@ -19,7 +19,7 @@ def text(value):
     raise SafeError('测试字段不是文本，已停止。')
 
 
-def probe(crm, name):
+def probe(crm, name, task_call=None):
     # FeishuTestCRM constructor verifies exact TEST base/table/schema first.
     def call(path, **kwargs):
         return crm.call(path, 'GET')
@@ -32,7 +32,7 @@ def probe(crm, name):
     if not guid:
         raise SafeError('该虚构记录没有飞书任务ID，已停止。')
     path = 'task/v2/tasks/' + urllib.parse.quote(guid,safe='') + '?user_id_type=open_id'
-    task = crm.call(path,'GET').get('data',{}).get('task',{})
+    task = (task_call or crm.call)(path,'GET').get('data',{}).get('task',{})
     if task.get('guid') != guid:
         raise SafeError('任务身份核验失败，已停止。')
     # Do not print task title/description, owner IDs, table IDs or credentials.
