@@ -20,6 +20,7 @@ class Task:
     completed: bool = False
     # Set false if completion-time content cannot be established.
     final_verified: bool = True
+    completed_at: str | None = None
 
 
 def digest(value):
@@ -29,7 +30,7 @@ def plan_text(task):
     return (task.due + '，' if task.due else '') + task.content
 
 def task_value(task):
-    return [task.content, task.due, task.completed, task.final_verified]
+    return [task.content, task.due, task.completed, task.final_verified, task.completed_at]
 
 class Conflict(Exception):
     pass

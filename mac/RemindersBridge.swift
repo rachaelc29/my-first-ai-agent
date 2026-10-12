@@ -59,8 +59,13 @@ func serialize(_ r: EKReminder, taskID: String, customerID: String) throws -> [S
             verified = modified.timeIntervalSince(completed) <= 0.010
         } else { verified = false }
     }
+    let format = ISO8601DateFormatter()
+    format.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    let completedAt: Any
+    if let date = r.completionDate { completedAt = format.string(from: date) }
+    else { completedAt = NSNull() }
     return ["id":taskID,"customer_id":customerID,"content":content,"due":dateText(r),
-            "completed":r.isCompleted,"final_verified":verified]
+            "completed":r.isCompleted,"final_verified":verified,"completed_at":completedAt]
 }
 func bound(_ items: [EKReminder], id: String) throws -> EKReminder? {
     let needle = "[CRM_SYNC_TASK:\(id);CUSTOMER:"

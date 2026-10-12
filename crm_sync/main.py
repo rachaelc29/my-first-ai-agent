@@ -32,8 +32,9 @@ def demo():
         print('2 Apple 模拟改期/内容 → 飞书下次follow:',engine.run())
         assert c.plan==task.due+'，'+task.content
         task.completed=True
+        task.completed_at=datetime.now(ZONE).isoformat()
         print('3 Apple 模拟完成 → 飞书最新follow/状态:',engine.run())
-        assert c.latest==task.content and c.status=='已完成'
+        assert c.latest.endswith('\n'+task.content) and c.status=='已完成' and c.plan==''
         print('4 重跑不重复创建:',engine.run())
         assert len(apple.tasks)==1
         print('Demo passed. No external services accessed.')

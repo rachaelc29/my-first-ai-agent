@@ -31,21 +31,21 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(t.id,self.c.task_id);self.assertEqual(self.apple.find(t.id).content,'虚构新行动')
     def test_completion_uses_latest_exact_content(self):
         t=self.create();t.content='仅记录此最终文字';self.e.run()
-        t.completed=True;self.e.run()
-        self.assertEqual(self.c.latest,'仅记录此最终文字');self.assertEqual(self.c.status,'已完成')
+        t.completed=True;t.completed_at='2026-10-12T10:00:00Z';self.e.run()
+        self.assertEqual(self.c.latest,'2026-10-12 21:00:00 +1100（墨尔本时间）\n仅记录此最终文字');self.assertEqual(self.c.status,'已完成')
         self.e.run();self.assertEqual(len(self.apple.tasks),1)
     def test_conflicting_plans_no_write(self):
         t=self.create();self.c.plan='2026-12-02，飞书变更';t.content='Apple变更'
         count=len(self.crm.writes);self.assertEqual(self.e.run()[0]['status'],'needs_confirmation')
         self.assertEqual(len(self.crm.writes),count);self.assertEqual(t.content,'Apple变更')
     def test_completion_conflicts_with_new_plan(self):
-        t=self.create();t.completed=True;self.c.plan='2026-12-09，新的计划';self.e.run()
+        t=self.create();t.completed=True;t.completed_at='2026-10-12T10:00:00Z';self.c.plan='2026-12-09，新的计划';self.e.run()
         self.assertEqual(self.c.latest,'旧的虚构跟进内容');self.assertNotEqual(self.c.status,'已完成')
     def test_completion_conflicts_with_latest(self):
-        t=self.create();t.completed=True;self.c.latest='手动新增的虚构文字';self.e.run()
+        t=self.create();t.completed=True;t.completed_at='2026-10-12T10:00:00Z';self.c.latest='手动新增的虚构文字';self.e.run()
         self.assertEqual(self.c.latest,'手动新增的虚构文字');self.assertNotEqual(self.c.status,'已完成')
     def test_unverified_completion_never_written(self):
-        t=self.create();t.completed=True;t.final_verified=False;self.e.run()
+        t=self.create();t.completed=True;t.completed_at='2026-10-12T10:00:00Z';t.final_verified=False;self.e.run()
         self.assertEqual(self.c.latest,'旧的虚构跟进内容');self.assertEqual(self.c.status,'进行中')
     def test_overdue_task_kept(self):
         t=self.create();self.e.today=date(2027,1,1);self.e.run()
@@ -58,7 +58,7 @@ class SyncTests(unittest.TestCase):
         self.e.run();self.assertEqual(len(self.apple.tasks),2)
         self.assertNotEqual(self.c.task_id,self.crm.get('mock-002').task_id)
     def test_wrong_customer_binding_stops(self):
-        t=self.create();t.customer_id='wrong-customer';t.completed=True;self.e.run()
+        t=self.create();t.customer_id='wrong-customer';t.completed=True;t.completed_at='2026-10-12T10:00:00Z';self.e.run()
         self.assertEqual(self.c.latest,'旧的虚构跟进内容')
     def test_crash_after_create_reconciles(self):
         original=self.crm.update
@@ -77,7 +77,7 @@ class SyncTests(unittest.TestCase):
         self.crm.update=uncertain;self.e.run();self.c.plan='2026-12-02，另外的计划'
         self.assertEqual(self.e.run()[0]['status'],'needs_confirmation');self.assertEqual(len(self.apple.tasks),1)
     def test_clear_content_does_not_erase_latest(self):
-        t=self.create();t.content='';t.completed=True;self.e.run()
+        t=self.create();t.content='';t.completed=True;t.completed_at='2026-10-12T10:00:00Z';self.e.run()
         self.assertEqual(self.c.latest,'旧的虚构跟进内容')
     def test_fuzzy_requires_rule_approval(self):
         self.c.plan='2026年12月初，虚构问候';self.e.run();self.assertEqual(len(self.apple.tasks),0)
@@ -99,10 +99,10 @@ class SyncTests(unittest.TestCase):
 
     # Additional human-resolution regressions.
     def test_confirm_completion_snapshot(self):
-        t=self.create();t.content='人工确认的最终虚构文字';t.completed=True;t.final_verified=False
+        t=self.create();t.content='人工确认的最终虚构文字';t.completed=True;t.completed_at='2026-10-12T10:00:00Z';t.final_verified=False
         self.e.run();self.assertEqual(self.c.status,'进行中')
         item=self.e.review()[0];self.e.resolve(item,'completion')
-        self.assertEqual(self.c.latest,t.content);self.assertEqual(self.c.status,'已完成')
+        self.assertEqual(self.c.latest,'2026-10-12 21:00:00 +1100（墨尔本时间）\n'+t.content);self.assertEqual(self.c.status,'已完成')
     def test_preview_invalidated(self):
         from crm_sync.model import Conflict
         t=self.create();item=self.e.review()[0];t.content='预览后变了'
@@ -116,7 +116,7 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(self.e.run()[0]['status'],'needs_confirmation')
 
     def test_new_round_keeps_old_completed_task(self):
-        t=self.create();t.completed=True;self.e.run()
+        t=self.create();t.completed=True;t.completed_at='2026-10-12T10:00:00Z';self.e.run()
         self.c.plan='2026-12-15，明确的新一轮跟进';self.e.run()
         self.e.resolve(self.e.review()[0],'new')
         self.assertEqual(len(self.apple.tasks),2)
@@ -129,13 +129,51 @@ class SyncTests(unittest.TestCase):
         self.assertEqual(len(self.apple.tasks),2)
 
     def test_changed_content_and_completion_still_needs_confirmation(self):
-        t=self.create();t.content='完成时还修改了内容';t.completed=True
+        t=self.create();t.content='完成时还修改了内容';t.completed=True;t.completed_at='2026-10-12T10:00:00Z'
         self.assertEqual(self.e.run()[0]['status'],'needs_confirmation')
         self.assertEqual(self.c.latest,'旧的虚构跟进内容')
         self.assertEqual(self.c.status,'进行中')
 
     def test_unchanged_content_completes_automatically(self):
-        t=self.create();t.completed=True
+        t=self.create();t.completed=True;t.completed_at='2026-10-12T10:00:00Z'
         self.assertEqual(self.e.run()[0]['status'],'synchronized')
-        self.assertEqual(self.c.latest,t.content)
+        self.assertEqual(self.c.latest,'2026-10-12 21:00:00 +1100（墨尔本时间）\n'+t.content)
         self.assertEqual(self.c.status,'已完成')
+        self.assertEqual(self.c.plan,'')
+
+    def test_missing_completion_time_does_not_clear_plan(self):
+        t=self.create();t.completed=True;t.completed_at=None
+        self.assertEqual(self.e.run()[0]['status'],'needs_confirmation')
+        self.assertEqual(self.c.plan,'2026-12-01，问候虚构客户')
+        self.assertEqual(self.c.latest,'旧的虚构跟进内容')
+
+    def test_winter_completion_time_is_not_sync_time(self):
+        t=self.create();t.completed=True;t.completed_at='2026-07-01T01:02:03Z'
+        self.e.run()
+        self.assertEqual(self.c.latest,'2026-07-01 11:02:03 +1000（墨尔本时间）\n'+t.content)
+
+    def test_legacy_completion_upgrade_is_one_time(self):
+        t=self.create();t.completed=True;t.completed_at=None
+        self.c.latest=t.content;self.c.status='已完成'
+        old_task=asdict(t);old_task.pop('completed_at')
+        self.e._save('state',self.c.id,{'crm':asdict(self.c),'task':old_task})
+        t.completed_at='2026-10-12T10:00:00Z'
+        self.assertEqual(self.e.run()[0]['status'],'synchronized')
+        self.assertEqual(self.c.plan,'')
+        self.assertTrue(self.c.latest.startswith('2026-10-12 21:00:00'))
+        self.assertEqual(self.e.run()[0]['status'],'unchanged_completed')
+
+    def test_legacy_upgrade_preserves_new_plan(self):
+        t=self.create();t.completed=True;t.completed_at=None
+        self.c.latest=t.content;self.c.status='已完成'
+        old_task=asdict(t);old_task.pop('completed_at')
+        self.e._save('state',self.c.id,{'crm':asdict(self.c),'task':old_task})
+        self.c.plan='2026-12-09，已经有新的虚构计划'
+        t.completed_at='2026-10-12T10:00:00Z'
+        self.assertEqual(self.e.run()[0]['status'],'needs_confirmation')
+        self.assertEqual(self.c.plan,'2026-12-09，已经有新的虚构计划')
+
+    def test_naive_completion_timestamp_rejected(self):
+        t=self.create();t.completed=True;t.completed_at='2026-10-12T10:00:00'
+        self.assertEqual(self.e.run()[0]['status'],'needs_confirmation')
+        self.assertNotEqual(self.c.plan,'')

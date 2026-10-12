@@ -18,14 +18,14 @@ class ReviewCLITests(unittest.TestCase):
             with patch.object(main,'ROOT',root), patch.object(main.sys,'platform','darwin'), patch.object(main,'AppleReminders',return_value=reminders),contextlib.redirect_stdout(output):
                 with patch.object(main.sys,'argv',['sync','mock-apple']):main.main()
                 task=next(iter(reminders.tasks.values()))
-                task.completed=True;task.final_verified=False
+                task.completed=True;task.completed_at='2026-10-12T10:00:00Z';task.final_verified=False
                 with patch.object(main.sys,'argv',['sync','mock-apple','--review']), patch('builtins.input',side_effect=['completion',approval]):main.main()
             saved=json.loads((root/'mock-apple/mock-crm.json').read_text())[0]
             return saved,output.getvalue()
     def test_confirm_persists_completion(self):
         saved,output=self.run_case('YES')
         self.assertEqual(saved['status'],'已完成')
-        self.assertEqual(saved['latest'],'询问虚构客户和家人讨论的结果')
+        self.assertEqual(saved['latest'],'2026-10-12 21:00:00 +1100（墨尔本时间）\n询问虚构客户和家人讨论的结果')
         self.assertIn('确认已执行',output)
         self.assertIn('已保存并核验',output)
     def test_surrounding_spaces_do_not_silently_skip(self):

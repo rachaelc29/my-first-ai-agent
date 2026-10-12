@@ -54,6 +54,18 @@ class Engine:
     def _baseline(self, c, task):
         self._save('state', c.id, {'crm': asdict(c), 'task': asdict(task)})
 
+    def _completion_changes(self, task):
+        if not task.completed_at:
+            raise Conflict('actual completion time missing')
+        try:
+            when = datetime.fromisoformat(task.completed_at.replace('Z', '+00:00'))
+            if when.tzinfo is None:
+                raise ValueError('timezone missing')
+        except (ValueError, TypeError):
+            raise Conflict('actual completion time invalid') from None
+        stamp = when.astimezone(ZONE).strftime('%Y-%m-%d %H:%M:%S %z')
+        return {'status':'已完成','latest':stamp+'（墨尔本时间）\n'+task.content,'plan':''}
+
     def _operation(self, c, desired_task, changes, current_task):
         op = {'crm_before': asdict(c), 'changes': changes,
               'task_before': asdict(current_task) if current_task else None,
@@ -120,7 +132,7 @@ class Engine:
                 raise Conflict('not an eligible completion')
             # Explicit human confirmation of the displayed current content, not a
             # claim to have recovered unavailable completion-time history.
-            self._operation(c, task, {'latest': task.content, 'status': '已完成'}, task)
+            self._operation(c, task, self._completion_changes(task), task)
         elif choice == 'apple' and not task.completed:
             self._operation(c, task, {'plan': plan_text(task)}, task)
         elif choice == 'crm' and not task.completed:
@@ -166,11 +178,17 @@ class Engine:
                         raise Conflict('completion snapshot not established')
                     if task.content != old_t['content'] or task.due != old_t['due']:
                         raise Conflict('content changed with completion; confirm final snapshot')
-                    changes = {'status':'已完成','latest':task.content}
-                    if task.content != old_t['content'] or task.due != old_t['due']:
-                        changes['plan'] = plan_text(task)
+                    changes = self._completion_changes(task)
                     self._operation(c,task,changes,task)
                 elif old_t['completed']:
+                    # One-time upgrade of a previously synchronized completion.
+                    # Only when both CRM fields and final action remain untouched.
+                    if (not old_t.get('completed_at') and task.completed_at
+                        and not crm_changed and c.latest == old_c['latest'] == old_t['content']
+                        and task.content == old_t['content'] and task.due == old_t['due']
+                        and task.completed):
+                        self._operation(c, task, self._completion_changes(task), task)
+                        continue
                     if crm_changed or apple_changed:
                         raise Conflict('completed plan changed; new plan or reopen needs confirmation')
                     self._event(c.id,'unchanged_completed')
