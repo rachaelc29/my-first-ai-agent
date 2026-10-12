@@ -27,6 +27,10 @@ class FeishuErrorTests(unittest.TestCase):
     def test_certificate_diagnosis(self):
         error=urllib.error.URLError(ssl.SSLCertVerificationError('mock-error-private-detail'))
         self.assertIn('SSL certificate verification failed',self.failure(error))
+    def test_http_error_preserves_only_numeric_api_code(self):
+        body=b'{"code":1470403,"msg":"mock-error-private-detail","token":"mock-sensitive-token"}'
+        error=urllib.error.HTTPError('https://mock.invalid',403,'mock-error-private-detail',{},io.BytesIO(body))
+        self.assertEqual(self.failure(error),'task API HTTP status 403; numeric API code 1470403')
     def test_authentication_stage(self):
         error=urllib.error.URLError(TimeoutError('mock-error-private-detail'))
         self.assertIn('authentication unavailable',self.failure(error,'auth/v3/tenant_access_token/internal','POST'))

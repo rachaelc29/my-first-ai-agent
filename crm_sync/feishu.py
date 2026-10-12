@@ -52,9 +52,21 @@ class FeishuTestCRM:
             with urllib.request.build_opener(NoRedirect()).open(request,timeout=30) as response:
                 result=json.load(response)
         except urllib.error.HTTPError as exc:
+            # Only expose the numeric API code; never print the raw error body,
+            # message, request URL, headers, or token.
+            api_code = None
+            try:
+                body = json.loads(exc.read(65536))
+                if isinstance(body,dict) and isinstance(body.get('code'),int):
+                    api_code = body['code']
+            except Exception:
+                pass
+            detail = ' HTTP status '+str(exc.code)
+            if api_code is not None:
+                detail += '; numeric API code '+str(api_code)
             if method in ('PUT','PATCH','POST') and not path.startswith('auth/'):
-                raise Uncertain(stage+' write HTTP status '+str(exc.code)+'; verify before retry') from None
-            raise Conflict(stage+' HTTP status '+str(exc.code)) from None
+                raise Uncertain(stage+' write'+detail+'; verify before retry') from None
+            raise Conflict(stage+detail) from None
         except urllib.error.URLError as exc:
             category = ('SSL certificate verification failed'
                         if isinstance(exc.reason,ssl.SSLCertVerificationError)
