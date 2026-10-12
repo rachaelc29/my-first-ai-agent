@@ -117,11 +117,32 @@ class SyncTests(unittest.TestCase):
 
     def test_new_round_keeps_old_completed_task(self):
         t=self.create();t.completed=True;t.completed_at='2026-10-12T10:00:00Z';self.e.run()
-        self.c.plan='2026-12-15，明确的新一轮跟进';self.e.run()
-        self.e.resolve(self.e.review()[0],'new')
+        self.c.plan='2026-12-15，明确的新一轮跟进'
+        self.assertEqual(self.e.run()[0]['status'],'synchronized')
         self.assertEqual(len(self.apple.tasks),2)
         self.assertIn(t.id,self.apple.tasks);self.assertTrue(t.completed)
         self.assertNotEqual(self.c.task_id,t.id);self.assertEqual(self.c.status,'进行中')
+        self.assertEqual(self.e.run()[0]['status'],'unchanged')
+        self.assertEqual(len(self.apple.tasks),2)
+
+    def test_next_round_does_not_overwrite_new_latest(self):
+        t=self.create();t.completed=True;t.completed_at='2026-10-12T10:00:00Z';self.e.run()
+        self.c.plan='2026-12-15，下一轮';self.c.latest='手动更新的虚构沟通内容'
+        self.assertEqual(self.e.run()[0]['status'],'needs_confirmation')
+        self.assertEqual(len(self.apple.tasks),1)
+
+    def test_next_round_with_old_relative_anchor_pauses(self):
+        self.c.anchor='2026-10-12'
+        t=self.create();t.completed=True;t.completed_at='2026-10-12T10:00:00Z';self.e.run()
+        self.c.plan='下周五，下一轮'
+        self.assertEqual(self.e.run()[0]['status'],'needs_confirmation')
+        self.assertEqual(len(self.apple.tasks),1)
+
+    def test_next_round_and_apple_edit_conflict(self):
+        t=self.create();t.completed=True;t.completed_at='2026-10-12T10:00:00Z';self.e.run()
+        self.c.plan='2026-12-15，下一轮';t.content='完成后在Apple又改了内容'
+        self.assertEqual(self.e.run()[0]['status'],'needs_confirmation')
+        self.assertEqual(len(self.apple.tasks),1)
     def test_new_round_confirmed_keeps_unfinished_old_task(self):
         t=self.create();self.c.plan='2026-12-15，独立的新任务'
         self.e.resolve(self.e.review()[0],'new')

@@ -181,6 +181,15 @@ class Engine:
                     changes = self._completion_changes(task)
                     self._operation(c,task,changes,task)
                 elif old_t['completed']:
+                    if (old_c['plan'] == '' and c.plan.strip() and crm_changed
+                        and not apple_changed and c.latest == old_c['latest']):
+                        content, due = self._parts(c)
+                        parsed = parse(c.plan, anchor=date.fromisoformat(c.anchor) if c.anchor else None, today=self.today)
+                        if parsed['kind'] == 'relative' and c.anchor == old_c['anchor']:
+                            raise Conflict('new relative plan lacks a new anchor')
+                        next_task = Task(str(uuid.uuid4()), c.id, content, due)
+                        self._operation(c, next_task, {'task_id':next_task.id,'status':'进行中'}, None)
+                        continue
                     # One-time upgrade of a previously synchronized completion.
                     # Only when both CRM fields and final action remain untouched.
                     if (not old_t.get('completed_at') and task.completed_at
