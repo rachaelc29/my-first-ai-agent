@@ -77,6 +77,21 @@ func run(_ input: [String: Any]) throws -> Any {
     }
     let list = try calendar(input)
     let items = try reminders(list)
+    if command == "completion_diagnostics" {
+        // Only metadata of managed tasks inside the fixed TEST list.
+        // No title, notes, client identifier, or personal list is returned.
+        let format = ISO8601DateFormatter()
+        format.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return items.filter { ($0.notes ?? "").contains("[CRM_SYNC_TASK:") }.map { r -> [String: Any] in
+            var result: [String: Any] = ["completed": r.isCompleted]
+            result["completion_time"] = r.completionDate.map { format.string(from: $0) } ?? "missing"
+            result["last_modified_time"] = r.lastModifiedDate.map { format.string(from: $0) } ?? "missing"
+            if let completed = r.completionDate, let modified = r.lastModifiedDate {
+                result["modified_minus_completed_seconds"] = modified.timeIntervalSince(completed)
+            }
+            return result
+        }
+    }
     let taskID = try required(input,"task_id")
     let customer = try required(input,"customer_id")
     let existing = try bound(items,id:taskID)
