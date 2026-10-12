@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>local.propertycrm.testbridge</string>
+<key>CFBundleName</key><string>CRM Sync Test Bridge</string>
+<key>CFBundleExecutable</key><string>RemindersBridge</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>NSRemindersUsageDescription</key><string>仅在您批准后连接 CRM-SYNC-TEST 测试列表，不处理个人待办。</string>
+<key>NSRemindersFullAccessUsageDescription</key><string>读取和修改 CRM-SYNC-TEST 中的虚构测试任务。程序逻辑限制测试列表，系统权限可能覆盖所有提醒事项。</string>
+</dict></plist>

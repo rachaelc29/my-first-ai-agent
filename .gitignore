@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.env
+.env.*
+*.sqlite
+*.sqlite-*
+*.db
+test-config.json
+mock-crm.json
+uncertain-creations.json
+.DS_Store
