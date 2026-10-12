@@ -164,6 +164,8 @@ class Engine:
                         raise Conflict('completion conflicts with crm changes')
                     if not task.final_verified or not task.content:
                         raise Conflict('completion snapshot not established')
+                    if task.content != old_t['content'] or task.due != old_t['due']:
+                        raise Conflict('content changed with completion; confirm final snapshot')
                     changes = {'status':'已完成','latest':task.content}
                     if task.content != old_t['content'] or task.due != old_t['due']:
                         changes['plan'] = plan_text(task)

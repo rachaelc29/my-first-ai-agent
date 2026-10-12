@@ -30,7 +30,8 @@ class SyncTests(unittest.TestCase):
         t=self.create();self.c.plan='2026-12-09，虚构新行动';self.e.run()
         self.assertEqual(t.id,self.c.task_id);self.assertEqual(self.apple.find(t.id).content,'虚构新行动')
     def test_completion_uses_latest_exact_content(self):
-        t=self.create();t.content='仅记录此最终文字';t.completed=True;self.e.run()
+        t=self.create();t.content='仅记录此最终文字';self.e.run()
+        t.completed=True;self.e.run()
         self.assertEqual(self.c.latest,'仅记录此最终文字');self.assertEqual(self.c.status,'已完成')
         self.e.run();self.assertEqual(len(self.apple.tasks),1)
     def test_conflicting_plans_no_write(self):
@@ -126,3 +127,15 @@ class SyncTests(unittest.TestCase):
         self.e.resolve(self.e.review()[0],'new')
         self.assertIn(t.id,self.apple.tasks);self.assertFalse(t.completed)
         self.assertEqual(len(self.apple.tasks),2)
+
+    def test_changed_content_and_completion_still_needs_confirmation(self):
+        t=self.create();t.content='完成时还修改了内容';t.completed=True
+        self.assertEqual(self.e.run()[0]['status'],'needs_confirmation')
+        self.assertEqual(self.c.latest,'旧的虚构跟进内容')
+        self.assertEqual(self.c.status,'进行中')
+
+    def test_unchanged_content_completes_automatically(self):
+        t=self.create();t.completed=True
+        self.assertEqual(self.e.run()[0]['status'],'synchronized')
+        self.assertEqual(self.c.latest,t.content)
+        self.assertEqual(self.c.status,'已完成')

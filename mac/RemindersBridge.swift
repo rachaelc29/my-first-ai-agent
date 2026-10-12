@@ -52,9 +52,11 @@ func serialize(_ r: EKReminder, taskID: String, customerID: String) throws -> [S
     let content = r.title + (extra.isEmpty ? "" : "\n" + extra)
     var verified = true
     if r.isCompleted {
-        // Conservative: absent timestamps or any later edit => manual confirmation.
+        // EventKit's normal completion write can stamp modification a few ms
+        // after completion. Allow at most 10ms of bookkeeping drift. Python
+        // additionally requires unchanged content/date before automatic writeback.
         if let completed = r.completionDate, let modified = r.lastModifiedDate {
-            verified = modified <= completed
+            verified = modified.timeIntervalSince(completed) <= 0.010
         } else { verified = false }
     }
     return ["id":taskID,"customer_id":customerID,"content":content,"due":dateText(r),
