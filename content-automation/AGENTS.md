@@ -1,168 +1,25 @@
----
-name: content-automation
-description: 房产建案与行业新闻社媒内容全自动化生成与发布管线规范（Google Sheets + Google Drive + Make.com + AI Engine + Social Media APIs）。覆盖台港纯繁体中文文案、去AI味、轻奢排版、4:5封面大字报、Row 2倒序压栈与Pre-flight合规自检。
----
+# Content Automation — 目录索引 v5.0（仅结构调整）
 
-# 項目与新聞內容自動化生成及發布系統規範 (AI 機讀與執行高可用版 SOP v4.0)
-*適用平台：Google Sheets + Google Drive + Make.com + AI Engine + Bannerbear/Placid + Social Media APIs*
+> 本文件只负责导航。业务规则以拆分后的 v4.0 原文为准，未获授权不得改写流程、审核顺序、内容标准或数据来源。
+> [v4.0 原文备份](archive/AGENTS-v4.0.md)。根目录 [AGENTS.md](../AGENTS.md) 的通用安全与权限规则仍适用。
 
-> **AI 必讀聲明**：在執行用戶指令時，嚴禁每次全篇通讀！請根據用戶當前指令類型，直接路由跳轉至對應模塊精準對齊規則。
+## 按任务读取
 
----
+| 任务 | 对应规则 |
+| --- | --- |
+| 项目图文 | [workflows/project-post.md](workflows/project-post.md) → [references/copywriting.md](references/copywriting.md) → [references/visual-design.md](references/visual-design.md) |
+| 新闻图文 | [workflows/news-post.md](workflows/news-post.md) → [references/copywriting.md](references/copywriting.md) → [references/visual-design.md](references/visual-design.md) |
+| 图文审核 | [references/preflight.md](references/preflight.md) |
+| 排期与发布 | [references/publishing.md](references/publishing.md) |
+| Make / Drive / Sheets 既有说明 | [integrations/current-stack.md](integrations/current-stack.md) |
+| 视频制作（仅预留目录） | [workflows/project-video.md](workflows/project-video.md)、[workflows/news-video.md](workflows/news-video.md) |
+| 可复用能力索引（未实现） | [../../.agents/skills/](../../.agents/skills/) |
 
-# 📌 模塊 0：AI 任務快速路由與執行索引 (Router & Execution Index)
+## 读取与维护约束
 
-| 用戶指令 / 觸發場景 | 核心路由章節 | 關鍵約束與產出物 |
-| :--- | :--- | :--- |
-| **場景 1：系統基礎設施搭建或檢查** | ➔ **模塊一：系統基礎設施與工程底座** | 建構 Drive 4級目錄、建立 Sheets 字段字典、配置 Make 3大場景連線與防斷流機制 |
-| **場景 2：撰寫/生成不動產建案推文** | ➔ **模塊二 / 引擎 A：文案生成規則庫** | 80% 核心賣點、四大支柱輪動、純繁體中文、雙幣換算、去 AI 味、輕奢排版 |
-| **場景 3：生成封面海報、AI生圖或排版** | ➔ **模塊二 / 引擎 B：視覺與海報生成規範** | 4:5 縱向原生比例、九宮格安全區、艾克獅白邊微傾斜、中原立體貼紙、Drive公開提權 |
-| **場景 4：發布排期調度、審批與發射** | ➔ **模塊二 / 引擎 C：排期與自動發射隊列** | Row 2 倒序壓棧、J列畫廊縮略圖極速審批、自底向上 DESC 發射 |
-| **場景 5：貼文輸出前的合規性自檢** | ➔ **模塊三：AI 輸出前強制執行自檢清單** | 逐項對照 10 項紅線 Assertion 清單（0 Emoji、無 AI 腔、雙幣換算、防吞空行） |
-
----
-
-# 🛠️ 模塊一：系統基礎設施與工程底座 (One-Off Infrastructure Setup)
-*本模塊為系統初始化與工程連線規範，日常文案生成任務可直接跳過此處。*
-
-## 1. Google Drive 目錄樹架構規範
-- 📁 `00_Content_Automation_Root/` *(自動化根目錄)*
-  - 📁 `01_Raw_Sources/` *(原始採集素材、網頁快照與新聞 PDF)*
-  - 📁 `02_Projects_Media_Kit/` *(建案官方原始核心資產包，保持 100% 純淨)*
-    - 📁 `[Project_Code]_[Project_Name]/` *(示例：MEL_01_Southbank)*
-      - 📁 `Images_HighRes/` *(高清渲染圖、實景圖)*
-      - 📁 `Floorplans_Brochures/` *(戶型圖紙、開發商樓書)*
-      - 📁 `Branding_Assets/` *(項目專屬 LOGO 與視覺要素)*
-  - 📁 `03_Generated_Outputs/` *(交付件歸檔庫)*
-    - 📁 `[YYYY-MM]/` *(按年月歸檔)*
-  - 📁 `04_System_Templates/` *(Prompt 模版與參考風格庫)*
-  - 📁 `05_Media_Temp_Library/` *(媒體臨時加字圖庫，全域公開讀取權限)*
-
-## 2. Google Sheets 數據庫結構字典 (Content_Pipeline)
-表頭命名為：`Content_Pipeline`。字段映射規範如下：
-
-| 列名 (Field Name) | 字段代碼 (Key) | 數據類型 | 說明 / 允許枚舉值 (Description & Enum) | 維護方 |
-| :--- | :--- | :--- | :--- | :--- |
-| **任務ID** | `task_id` | String | 唯一主鍵，如 `TASK_20261023_001` | 系統自動生成 |
-| **錄入時間** | `created_at` | DateTime | 初始錄入時間 (YYYY-MM-DD HH:mm) | 系統 / 採集器 |
-| **內容類型** | `content_type` | Single Select | `Project_Highlight` / `Market_News` / `Industry_Analysis` | 人工 / 採集器 |
-| **建案代碼** | `project_code` | String | 關聯建案唯一代碼（須與 Drive 目錄名嚴格對齊） | 人工 / 採集器 |
-| **原始標題** | `source_title` | String | 新聞原標題或本期推介主題 | 人工 / 採集器 |
-| **素材鏈接** | `source_url` | URL | 原文網址或對應 Drive 資料夾鏈接 | 人工 / 採集器 |
-| **核心事實摘要** | `raw_notes` | Text | 關鍵數據、賣點或政策要點 (AI 輸入源) | 人工 / 提取模塊 |
-| **目標受眾** | `tone_target` | Single Select | `Luxury_Investor` / `First_Home_Buyer` / `General_Market` | 人工 / 默認規則 |
-| **執行狀態** | `status` | Single Select | `Pending_Generate ➔ Generating ➔ Review_Required ➔ Approved ➔ Publishing ➔ Published ➔ Failed` | 狀態機核心字段 |
-| **FB深度長文** | `copy_social` | Long Text | AI 生成：180-240字深度版（含 Hook、正文、CTA、全角標點、防吞空行） | AI 回填 |
-| **IG/Threads極簡版** | `copy_short` | Long Text | AI 生成：50-150字真人挖寶感短文（嚴格限 150 字內，帶 #台灣 #香港） | AI 回填 |
-| **標籤集合** | `hashtags` | Text | 核心標籤數組，包含 #台灣 #香港 等 | AI 回填 |
-| **封面圖 ID** | `drive_image_id` | String | 提權後的封面圖 Drive File ID | AI / 系統回填 |
-| **畫廊縮略圖** | `cover_thumbnail` | Formula | 公式 `=IMAGE(generated_cover_url)`，供首屏並排極速審批 | 表格公式自動渲染 |
-| **生成封面直鏈** | `generated_cover_url` | URL | 渲染完成的 4:5 封面直鏈 (已提權直接下載流) | AI / 系統回填 |
-| **配圖圖集鏈接** | `asset_image_urls` | String/URLs | 輪播圖集直鏈數組（首圖為封面海報，逗號分隔） | AI 匹配 / 人工確認 |
-| **計劃發布時間** | `scheduled_publish_time` | DateTime | 預定發布時間戳 | 人工排期 / 自動排期 |
-| **實際發布時間** | `published_at` | DateTime | 完成發布的時間戳 | 發布模塊回填 |
-| **平台帖子鏈接** | `platform_post_ids` | Long Text | 回寫平台 Post ID 與直達鏈接 JSON (如 `{"FB":"123","IG":"456"}`) | 發布模塊回填 |
-| **運行日誌** | `log_message` | Text | 流程異常日誌或 API 報錯信息 | Make 錯誤處理機制 |
-
-## 3. Make.com 算子藍圖與防斷流工程閉環
-- **資產提權防 404 (Anti-404 Pipeline)**：
-  - 新圖生成上傳 Drive 後，立即調用 Drive API 移入公開臨時庫，並將權限設為 `Role: Reader, Type: Anyone`。
-  - 直鏈拼接公式：`https://drive.google.com/uc?export=download&id={{FILE_ID}}` 或讀取 `webContentLink`。
-  - 入表前強制自檢權限，非公開鏈接嚴禁入表。
-- **三大解耦場景**：
-  - **Scenario A（內容生成引擎）**：監聽 `status = Pending_Generate` ➔ 立即更新為 `Generating`（狀態鎖定） ➔ 檢索 Drive 資產 ➔ 調用 LLM API ➔ 解析 JSON ➔ 回填文案並切換為 `Review_Required` ➔ 發送審批提醒。
-  - **Scenario B（人工審批）**：用戶在 Google Sheets 畫廊查驗文案與縮略圖，確認通過後一鍵切換為 `Approved` 並排期。
-  - **Scenario C（多渠道發射與歸檔）**：每 15 分鐘定時輪詢 `status = Approved` 且時間到期的貼文，按 `Order by: Row number DESC` 自底向上發射，調用 Facebook/Instagram/Threads API 發布，歸檔快照並回寫 `Published` 及平台鏈接。
-- **容錯自愈**：API 配置 Break/Resume 重試指令（重試 3 次），失敗寫入 `log_message` 並標記 `Failed`，避免隊列卡死。
-
----
-
-# ⚙️ 模塊二：日常任務執行引擎 (Runtime Execution Engines)
-
-## 引擎 A：文案生成規則庫 (Copywriting Engine)
-> **嚴格分步生成機制**：嚴禁一次性堆砌所有文案！  
-> 步驟 1：先出 Facebook 深度長文草案 ➔ 步驟 2：用戶確認批准 ➔ 步驟 3：衍生 Instagram/Threads 極簡版與封面 ➔ 步驟 4：二次確認後正式寫入 Sheets。
-
-### 1. 核心賣點 (80%) vs 內容支柱 (20%)
-- **80% 核心賣點約束（零編造紅線）**：事實、數字、交付保障 100% 來源於項目資料庫與權威新聞。嚴禁 AI 捏造交屋時間、價格、面積與地理距離。
-- **20% 內容支柱輪動節奏**：
-  - **支柱 1：資本與機構邏輯 (約 35%)**：拿地決策、開發商資金、養老基金背書、資產保值。
-  - **支柱 2：街區更新與生活方式 (約 30%)**：商街綠地、名校文教圈、高品位生活圖景。
-  - **支柱 3：租金錨點與剛需底座 (約 25%)**：學生公寓高租金錨點 ($750-$800/週)、低空置率、正現金流。
-  - **支柱 4：確定工程與安全落地 (約 10%)**：施工進度、確定性交付、早鳥選房方案。
-
-### 2. 純繁體中文在地化標準（專攻台灣與香港市場）
-- **全面停發英文版**，集中演算法權重。
-- **港台房產高頻詞替換字典**：
-  - 期房 ➔ **預售屋**｜樓盤/項目 ➔ **建案**｜投資回報率 ➔ **投報率**
-  - 首付 ➔ **頭期款/自備款**｜公共配套 ➔ **公設**｜交房 ➔ **交屋/交割**｜買房 ➔ **置產**
-- **雙幣換算標註**：保留澳幣原值，自動標註新台幣或港幣。例：`1.15 億澳幣（約 24 億新台幣 / 5.8 億港幣）`。
-- **強制目標標籤**：每篇推文文末必須附帶 `#台灣 #香港 #海外置產 #墨爾本房產`。
-
-### 3. 多平台雙軌風格分流
-- **Facebook 專屬深度版 (`copy_social`)**：
-  - 篇幅：**180–240 字**。
-  - 結構：前 3 行強鉤子 ➔ 2–3 個緊湊自然段展開硬核價值 ➔ 低摩擦 CTA（如：【專案諮詢】歡迎私訊【建案名】）➔ 3–5 個標籤（含 #台灣 #香港）。
-- **Instagram & Threads 專屬極簡版 (`copy_short`)**：
-  - 篇幅：**嚴格限制在 50–150 字以內（絕不超標）**。
-  - 語氣：**真人感、去廣告化、年輕化**。像在墨爾本生活的年輕人日常挖到寶的驚喜真實分享（Surprise discovery），融入輕鬆生動網絡梗。
-  - 骨架：`✦` 開頭極致金句 ➔ 1–2 句硬核賣點 ➔ 簡短互動（“私訊看內部實景”）➔ 核心標籤（含 #台灣 #香港）。
-
-### 4. 去 AI 味與輕奢排版防呆規範
-- **嚴禁 AI 味 (No AI Tells)**：禁用二元反差句（不是…而是…）、禁用否定排比、禁用廉價套話（重新定義/盡享奢華等）、禁用偽詩意單行斷句 (Broetry)、禁用機械虛假互動。
-- **輕奢排版**：徹底禁用卡通 Emoji；統一採用高端矢量符號：`◆`、`◇`、`✦`、【地標】、【置產諮詢】、`[Highlights]`、`▶`、`✓`。
-- **防吞空行機制**：空行處強制插入不可見全角空白字符點（`⠀`），防止社媒壓縮折疊。
-
----
-
-## 引擎 B：視覺與海報生成規範 (Visual & Design Engine)
-
-### 1. 構圖與九宮格安全區
-- **原生 4:5 縱向比例 (1080x1350)**：文字與視覺主體嚴格限制在 1:1 正方形九宮格安全區內，Feed 預覽絕不切字。
-- **文字呼吸間距**：文字總寬度不超過畫布 77%，與主體（建築、人物、車輛）保持 50-70px 呼吸間距，嚴禁遮擋核心主體。
-- **字體層級與襯底**：
-  - 第一層：香檳金個人 IP 標牌 `◆ Rachael 帶你看房產 · MELBOURNE CBD · [建案名稱] ◆`（微菱形防亂碼）。
-  - 第二層：純白粗黑體核心金句大標題（顯著放大，1.5 秒吸睛）。
-  - 第三層：淺灰白精煉副標題。
-  - 襯底：文字區域鋪設 20%-30% 柔和暗角微漸變，確保文字高對比高清晰。
-
-### 2. 配圖四步篩選漏斗與 3+1 動態版型
-- **選圖漏斗**：極致細節美學圖 ➔ 精彩新聞一手原圖 ➔ AI 定制場景痛點大字報（陽光真實，拒絕陰沉冷灰） ➔ 網絡高畫質兜底。
-- **動態版型庫（淘汰固定死板方塊）**：
-  - **艾克獅法**：大字一律採用 6–8px 實體白邊 + 深層投影浮字；核心轉折句做 3°–5° 微傾斜。
-  - **中原地產法**：痛點拷問詞採用獨立傾斜立體小貼紙（亮色反白）。
-  - **版型因圖制宜**：天空開闊採【頂部無框雜誌風】｜天際線飽滿採【底部電影海報風】｜構圖分明採【側欄懸浮定錨風】｜實景融入採【場景道具融入風】。
-
----
-
-## 引擎 C：排期與自動發射隊列 (Publishing Engine)
-
-### 1. Row 2 倒序壓棧 (LIFO)
-- 所有前台採集端或自動化寫入時，**必須且只能插入在 Row 2（表頭下方第一行）**。
-- Make.com "Insert Row" 模塊 Row number 參數顯式填入 `2`，歷史數據自動下推，最新任務永遠置頂。
-
-### 2. 畫廊極速審批流 (Cell Gallery Flow)
-- 排期表 J 列（`Cover_Thumbnail`）使用 `=IMAGE()` 函數，與文案左右並排呈現封面縮略圖。
-- 審核人員無需打開外部鏈接，直接在表格內審查文案與視覺，確認後一鍵切換 `Approved`。
-
-### 3. 自底向上自動發射
-- 定時喚醒節奏：周一 9:00 AM（3 篇）+ 周四 9:00 AM（4 篇）+ 每日新聞（1 篇），每天穩定輸出 2 篇。
-- Make 採用 `Order by: Row number DESC`（降序），自底向上自動發射最底部第一條 `Approved` 貼文，回寫 Post ID 與直達鏈接。
-
----
-
-# 🛑 模塊三：AI 輸出前強制執行自檢清單 (Pre-Flight Assertion Checklist)
-> **AI 執行紅線**：在生成任何文案或 JSON 數據返回給用戶或寫入表格前，**必須在內部逐項校驗以下 10 條斷言（全部 True 方可輸出）**：
-
-- [ ] **1. 事實來源 (80% 規則)**：推文中的所有核心數字、價格、交付年份、地理距離是否 100% 來自素材庫，**無任何臆造**？
-- [ ] **2. 語言純度**：是否為 100% 純正繁體中文，且**完全杜絕大陸詞彙**（已替換為：預售屋、建案、投報率、自備款、公設、交屋、置產）？
-- [ ] **3. 雙幣換算**：出現關鍵金額時，是否已**自動換算並標註新台幣 (NTD) 或港幣 (HKD)**？
-- [ ] **4. 篇幅紅線**：
-  - Facebook 深度版是否嚴格控制在 **180–240 字**？
-  - Instagram & Threads 極簡版是否**嚴格控制在 50–150 字以內**？
-- [ ] **5. 風格調性**：Threads/IG 短版是否具備**“真人生活挖掘驚喜感”**，杜絕生硬中介腔？
-- [ ] **6. 零 Emoji 規範**：是否**徹底禁用 4 字節卡通 Emoji**，僅使用指定高級矢量符號（`◆`、`◇`、`✦`、【】、`[ ]`、`▶`、`✓`）？
-- [ ] **7. 防吞空行處理**：所有段落空行處是否均已插入不可見全角空白字符點（`⠀`）？
-- [ ] **8. 零 AI 痕跡**：是否完全杜絕了二元反差句（不是…而是…）、否定排比、廉價營銷套話（重新定義/盡享奢華）、Broetry 單行斷句與虛假互動？
-- [ ] **9. 核心客群標籤**：文末標籤數組中是否**強制包含 `#台灣 #香港`**？
-- [ ] **10. 輸出格式**：若是自動化生成步驟，是否為**嚴格閉合、無語法錯誤的標準 JSON**？
+- 这是一次**结构整理**，不是业务规则升级；不可把其他聊天、项目或外部平台中的设定自动合并进来。
+- **保留 v4.0 原有的两轮审核顺序**：先生成 Facebook 草案并由用户批准；再生成 IG/Threads 版本与封面；二次批准后写入 Sheets。详见文案原始规范。
+- 项目资料的实际文字来源由用户明确为 **Google Docs**。v4.0 未完整描述该来源的技术接入方式；这里只记录来源说明，**不据此变更原有 Drive / Sheets / Make 条款**，也不擅自引入 Notion。
+- 新闻与项目之间只做目录分流，不新增采集标准、审核步骤或创作规则。
+- 视频文件与 Skills 文件仅为占位入口，不能视作已实现、已接入或已授权的能力。
+- 若 v4.0 内部存在不一致，原样保留并单独报告，不擅自修正。
