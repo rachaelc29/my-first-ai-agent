@@ -1,10 +1,14 @@
-# 项目图文 Workflow
+# 项目图文 — 原规则导航
 
-**状态：文档定义；不代表已通过端到端测试。**
+本文件只提供指向 **v4.0** 的阅读路径，不新设流程。
 
-1. 从既有项目数据库、Notion 或官方项目资料读取核心卖点与证据；切勿补造细节。
-2. 按 [文案规范](../references/copywriting.md) 生成 Facebook 草案；依据原 v4.0 要求先交用户确认，再制作 IG/Threads 衍生稿和封面。
-3. 使用 [视觉规范](../references/visual-design.md) 制作图文；所有事实通过 [审核清单](../references/preflight.md)。
-4. 用户批准后，才由具备授权的发布流程处理；见 [发布规则](../references/publishing.md)。
+## 必读原规则
+1. [文案引擎 A 原文](../references/copywriting.md)：包含先 Facebook 草案 → 用户批准 → IG/Threads 及封面 → 二次批准 → 写入 Sheets 的顺序。
+2. [视觉引擎 B 原文](../references/visual-design.md)。
+3. [发布引擎 C 原文](../references/publishing.md)。
+4. [预检清单原文](../references/preflight.md)。
+5. [既有 Google Drive / Sheets / Make 说明](../integrations/current-stack.md)。
 
-**来源区分**：建案事实必须来自相应建案资料，不套用新闻来源。原 v4.0 规则完整保留在 archive。
+**项目资料来源说明（用户确认）**：项目文字资料取自 Google Docs。原 v4.0 未明确写出 Google Docs 的接入细节，不擅自虚构。不要引用 Notion，也不要把其他任务的设定挪到这里。
+
+本次不新增、删减、颠倒任何创作和审核步骤。

@@ -1,10 +1,7 @@
-# 新闻图文 Workflow
+# 新闻图文 — 原规则导航
 
-**状态：文档定义；不代表已通过端到端测试。**
+本文件只提供指向 **v4.0** 的阅读路径，不新设新闻采集、改写或审核要求。
 
-1. 收集权威新闻原文及发布日期、原始链接；记录发生日期和媒体/官方来源。
-2. 核实关键事实、政策与数字；将事实和分析分开，若证据不足则明确标注。
-3. 依 [文案规范](../references/copywriting.md) 生成平台文案，新闻配图依据 [视觉规范](../references/visual-design.md)；不得拿建案销售卖点当成新闻事实。
-4. 依 [审核清单](../references/preflight.md) 人工确认，再遵循 [发布规则](../references/publishing.md)。
+按需读取 [文案引擎 A](../references/copywriting.md)、[视觉引擎 B](../references/visual-design.md)、[发布引擎 C](../references/publishing.md)、[预检清单](../references/preflight.md) 和 [基础设施说明](../integrations/current-stack.md)。
 
-**提醒**：现有 v4.0 将项目及新闻混合描述；新闻特有的采集、版权与时效性细则需在后续完善。
+保留 v4.0 对审核步骤、字数、繁体中文、视觉、发布队列等的原始要求。尚未在 v4.0 中定义的新闻专用规则，标为**未规定**，不得自行补全。

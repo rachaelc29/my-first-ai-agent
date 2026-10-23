@@ -1,7 +1,7 @@
 ---
 name: visual-designer
-description: 依据获准素材与品牌规范规划房产项目或新闻社媒图文视觉。
+description: 预留的视觉制作能力入口，以现有 v4.0 视觉规则为准。
 ---
-# Visual Designer（接口草案，未接入执行工具）
+# Visual Designer — 占位
 
-输入：获准素材及文案。输出：画面规划、图片来源、需要的人工作图步骤或有能力时交付实际文件。不可无工具时虚报已生成图片。见 content-automation/references/visual-design.md。
+现有视觉要求只见 `content-automation/references/visual-design.md`（v4.0 原文）。**尚未实现**，不得擅自更换设计标准。
